@@ -59,4 +59,9 @@ test/tracetesting/tracetesting-vars.yaml
 
 /terraform/.terraform/
 /terraform/EKS/
-
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars       # if it contains secrets
+override.tf
+override.tf.json
