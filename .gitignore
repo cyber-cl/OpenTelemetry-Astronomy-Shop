@@ -54,3 +54,9 @@ test/tracetesting/tracetesting-vars.yaml
 *.apk
 
 !src/currency/build
+
+#Terraform
+
+/terraform/.terraform/
+/terraform/EKS/
+
