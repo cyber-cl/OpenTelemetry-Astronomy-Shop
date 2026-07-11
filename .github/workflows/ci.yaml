@@ -95,14 +95,10 @@ jobs:
               run: |
                   sed -i "s|image: .*|image: ${{secrets.DOCKER_USERNAME}}/product-catalog-service:${{github.run_id}}|" ./kubernetes/productcatalog/deploy.yaml
            
-
-                  
-
-
             - name: Commit and push changes
               run: |
                     git config --global user.name "Prashant Jakhar"
                     git config --global user.email "prashantrock777@gmail.com"
-                    git add ./kubernetes/deploy.yaml
+                    git add ./kubernetes/productcatalog/deploy.yaml
                     git commit -m "[CI] Update image tag to ${{secrets.DOCKER_USERNAME}}/product-catalog-service:${{github.run_id}}"
                     git push
