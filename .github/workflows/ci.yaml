@@ -40,6 +40,12 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
+
+            - name: Setup Go
+              uses: actions/setup-go@v6
+              with:
+                go-version-file: src/product-catalog/go.mod
+
             - name: golangci-lint
               uses: golangci/golangci-lint-action@v9
               with:
