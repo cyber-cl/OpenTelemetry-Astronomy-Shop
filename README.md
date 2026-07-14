@@ -1,141 +1,383 @@
-**Note:** This project is a fork of `opentelemetry-demo`. Thanks to the team and contributors for opensourcing this wonderful demo project. Definitely one of the best on internet.
+# 🔭 OpenTelemetry Astronomy Shop — End-to-End DevOps Pipeline
 
-<!-- markdownlint-disable-next-line -->
-# <img src="https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png" alt="OTel logo" width="45"> OpenTelemetry Demo
+> A production-grade DevOps implementation on the [OpenTelemetry Demo](https://github.com/open-telemetry/opentelemetry-demo) microservices application — covering **containerization**, **infrastructure-as-code**, and **fully automated GitOps CI/CD** on AWS EKS.
 
-[![Slack](https://img.shields.io/badge/slack-@cncf/otel/demo-brightgreen.svg?logo=slack)](https://cloud-native.slack.com/archives/C03B4CWV4DA)
-[![Version](https://img.shields.io/github/v/release/open-telemetry/opentelemetry-demo?color=blueviolet)](https://github.com/open-telemetry/opentelemetry-demo/releases)
-[![Commits](https://img.shields.io/github/commits-since/open-telemetry/opentelemetry-demo/latest?color=ff69b4&include_prereleases)](https://github.com/open-telemetry/opentelemetry-demo/graphs/commit-activity)
-[![Downloads](https://img.shields.io/docker/pulls/otel/demo)](https://hub.docker.com/r/otel/demo)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?color=red)](https://github.com/open-telemetry/opentelemetry-demo/blob/main/LICENSE)
-[![Integration Tests](https://github.com/open-telemetry/opentelemetry-demo/actions/workflows/run-integration-tests.yml/badge.svg)](https://github.com/open-telemetry/opentelemetry-demo/actions/workflows/run-integration-tests.yml)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/opentelemetry-demo)](https://artifacthub.io/packages/helm/opentelemetry-helm/opentelemetry-demo)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9247/badge)](https://www.bestpractices.dev/en/projects/9247)
+---
 
-## Welcome to the OpenTelemetry Astronomy Shop Demo
+## 📌 Project Overview
 
-This repository contains the OpenTelemetry Astronomy Shop, a microservice-based
-distributed system intended to illustrate the implementation of OpenTelemetry in
-a near real-world environment.
+The **OpenTelemetry Astronomy Shop** is a cloud-native e-commerce application composed of **15+ polyglot microservices** (Go, Python, Java, .NET, Node.js, Rust, C++, and more). I used this as the foundation to build and demonstrate a complete DevOps lifecycle:
 
-Our goals are threefold:
+| Phase | What I Did |
+|---|---|
+| **Containerization** | Wrote production-ready, multi-stage Dockerfiles for every microservice |
+| **Infrastructure as Code** | Provisioned the entire AWS infrastructure (VPC, subnets, NAT, EKS) using Terraform with reusable modules and remote state |
+| **CI Pipeline** | Built GitHub Actions workflows that build, lint, test, and push Docker images to DockerHub |
+| **CD Pipeline** | Deployed microservices to EKS via ArgoCD using a GitOps pattern — any manifest change auto-syncs to the cluster |
 
-- Provide a realistic example of a distributed system that can be used to
-  demonstrate OpenTelemetry instrumentation and observability.
-- Build a base for vendors, tooling authors, and others to extend and
-  demonstrate their OpenTelemetry integrations.
-- Create a living example for OpenTelemetry contributors to use for testing new
-  versions of the API, SDK, and other components or enhancements.
+---
 
-We've already made [huge
-progress](https://github.com/open-telemetry/opentelemetry-demo/blob/main/CHANGELOG.md),
-and development is ongoing. We hope to represent the full feature set of
-OpenTelemetry across its languages in the future.
+## 🏗️ Architecture
 
-If you'd like to help (**which we would love**), check out our [contributing
-guidance](./CONTRIBUTING.md).
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DEVELOPER WORKFLOW                                │
+│                                                                            │
+│   Code Push ──► GitHub Actions CI ──► Build & Test ──► Docker Image Push   │
+│                                              │                              │
+│                                              ▼                              │
+│                                   Update K8s Manifest                       │
+│                                    (image tag via sed)                      │
+│                                              │                              │
+│                                              ▼                              │
+│                                   Git Commit & Push                         │
+│                                   (to same repo)                            │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            ARGOCD (GitOps)                                  │
+│                                                                             │
+│   Watches repo ──► Detects manifest change ──► Syncs to EKS cluster         │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          AWS EKS CLUSTER                                    │
+│                     (Provisioned via Terraform)                              │
+│                                                                             │
+│   ┌──────────────────┐  ┌────────────────────┐  ┌──────────────────┐        │
+│   │  Product Catalog  │  │  Recommendation    │  │    Ad Service    │        │
+│   │  Service (Go)     │  │  Service (Python)  │  │    (Java)        │        │
+│   └──────────────────┘  └────────────────────┘  └──────────────────┘        │
+│                                                                             │
+│   ┌──────────────────┐  ┌────────────────────┐  ┌──────────────────┐        │
+│   │  Cart Service     │  │  Checkout Service  │  │  Currency Svc    │        │
+│   └──────────────────┘  └────────────────────┘  └──────────────────┘        │
+│                                                                             │
+│   ┌──────────────────┐  ┌────────────────────┐  ┌──────────────────┐        │
+│   │  Payment Service  │  │  Shipping Service  │  │  Email Service   │        │
+│   └──────────────────┘  └────────────────────┘  └──────────────────┘        │
+│                         ... + more services                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    AWS INFRASTRUCTURE (Terraform)                            │
+│                                                                             │
+│   VPC (10.0.0.0/16)                                                         │
+│   ├── Public Subnets  (3 AZs) ── Internet Gateway ── NAT Gateways          │
+│   └── Private Subnets (3 AZs) ── EKS Worker Nodes (t3.medium)              │
+│                                                                             │
+│   State: S3 Backend (opentelemetry-eks-state-bucket)                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
-If you'd like to extend this demo or maintain a fork of it, read our
-[fork guidance](https://opentelemetry.io/docs/demo/forking/).
+---
 
-## Quick start
+## 🐳 Phase 1 — Containerization (Docker)
 
-You can be up and running with the demo in a few minutes. Check out the docs for
-your preferred deployment method:
+Built **multi-stage, production-optimized Docker images** for the microservices. Each image follows best practices to minimize size and attack surface.
 
-- [Docker](https://opentelemetry.io/docs/demo/docker_deployment/)
-- [Kubernetes](https://opentelemetry.io/docs/demo/kubernetes_deployment/)
+### Key Services Containerized
 
-## Documentation
+| Service | Language | Base Image | Highlights |
+|---|---|---|---|
+| **Product Catalog** | Go | `golang:1.22-alpine` → `alpine` | Multi-stage build, Go build cache mounts, ~15 MB final image |
+| **Recommendation** | Python | `python:3.12-slim-bookworm` | OpenTelemetry auto-instrumentation bootstrapped at build time |
+| **Ad Service** | Java | `eclipse-temurin:21-jdk` → `eclipse-temurin:21-jre` | Multi-stage build with Gradle, JDK for build / JRE for runtime |
 
-For detailed documentation, see [Demo Documentation][docs]. If you're curious
-about a specific feature, the [docs landing page][docs] can point you in the
-right direction.
+### Dockerfile Best Practices Applied
 
-## Demos featuring the Astronomy Shop
+- ✅ **Multi-stage builds** — separate build and runtime stages to exclude compilers and source
+- ✅ **Build cache mounts** — `--mount=type=cache` for Go module and build caches
+- ✅ **Minimal base images** — Alpine and slim variants to reduce CVE surface area
+- ✅ **Dependency layer caching** — `COPY go.mod` / `requirements.txt` before source for optimal Docker layer caching
+- ✅ **Non-root users** and minimal runtime footprint
 
-We welcome any vendor to fork the project to demonstrate their services and
-adding a link below. The community is committed to maintaining the project and
-keeping it up to date for you.
+### Docker Compose
 
-|                           |                |                                  |
-|---------------------------|----------------|----------------------------------|
-| [AlibabaCloud LogService] | [Elastic]      | [OpenSearch]                     |
-| [AppDynamics]             | [Google Cloud] | [Sentry]                         |
-| [Aspecto]                 | [Grafana Labs] | [ServiceNow Cloud Observability] |
-| [Axiom]                   | [Guance]       | [Splunk]                         |
-| [Axoflow]                 | [Honeycomb.io] | [Sumo Logic]                     |
-| [Azure Data Explorer]     | [Instana]      | [TelemetryHub]                   |
-| [Coralogix]               | [Kloudfuse]    | [Teletrace]                      |
-| [Dash0]                   | [Liatrio]      | [Tracetest]                      |
-| [Datadog]                 | [Logz.io]      | [Uptrace]                        |
-| [Dynatrace]               | [New Relic]    |                                  |
+A full `docker-compose.yml` is available to spin up the **entire 15+ service application** locally for development and testing, with shared networking, health checks, and resource limits.
 
-## Contributing
+```bash
+# Spin up the full application locally
+docker compose up -d
+```
 
-To get involved with the project see our [CONTRIBUTING](CONTRIBUTING.md)
-documentation. Our [SIG Calls](CONTRIBUTING.md#join-a-sig-call) are every other
-Monday at 8:30 AM PST and anyone is welcome.
+---
 
-## Project leadership
+## 🏛️ Phase 2 — Infrastructure as Code (Terraform)
 
-[Maintainers](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#maintainer)
-([@open-telemetry/demo-maintainers](https://github.com/orgs/open-telemetry/teams/demo-maintainers)):
+Provisioned the **complete AWS infrastructure** using Terraform with a modular architecture and remote state management.
 
-- [Juliano Costa](https://github.com/julianocosta89), Datadog
-- [Mikko Viitanen](https://github.com/mviitane), Dynatrace
-- [Pierre Tessier](https://github.com/puckpuck), Honeycomb
+### Module Architecture
 
-[Approvers](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#approver)
-([@open-telemetry/demo-approvers](https://github.com/orgs/open-telemetry/teams/demo-approvers)):
+```
+terraform/
+├── main.tf                  # Root module — orchestrates VPC + EKS
+├── variables.tf             # Parameterized inputs (CIDR, AZs, node config)
+├── outputs.tf               # Cluster endpoint, name, VPC ID
+├── Modules/
+│   ├── vpc/                 # Reusable VPC module
+│   │   ├── main.tf          #   VPC, subnets, IGW, NAT, route tables
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── eks/                 # Reusable EKS module
+│       ├── main.tf          #   EKS cluster, node groups, IAM roles
+│       ├── variables.tf
+│       └── outputs.tf
+└── EKS/
+    └── backend/
+        └── main.tf          # S3 bucket for Terraform remote state
+```
 
-- [Cedric Ziel](https://github.com/cedricziel) Grafana Labs
-- [Penghan Wang](https://github.com/wph95), AppDynamics
-- [Reiley Yang](https://github.com/reyang), Microsoft
-- [Roger Coll](https://github.com/rogercoll), Elastic
-- [Ziqi Zhao](https://github.com/fatsheep9146), Alibaba
+### VPC Module — What It Provisions
 
-Emeritus:
+| Resource | Details |
+|---|---|
+| **VPC** | `10.0.0.0/16` CIDR with DNS hostnames enabled |
+| **Public Subnets** | 3 subnets across `us-east-1a`, `1b`, `1c` — tagged for external ELB |
+| **Private Subnets** | 3 subnets across 3 AZs — tagged for internal ELB, hosts EKS worker nodes |
+| **Internet Gateway** | Attached to VPC for public internet access |
+| **NAT Gateways** | One per AZ with Elastic IPs — enables private subnet outbound traffic |
+| **Route Tables** | Public routes → IGW; Private routes → NAT Gateway per AZ |
 
-- [Austin Parker](https://github.com/austinlparker)
-- [Carter Socha](https://github.com/cartersocha)
-- [Michael Maxwell](https://github.com/mic-max)
-- [Morgan McLean](https://github.com/mtwo)
+### EKS Module — What It Provisions
 
-### Thanks to all the people who have contributed
+| Resource | Details |
+|---|---|
+| **EKS Cluster** | Kubernetes `v1.36`, deployed into private subnets |
+| **Cluster IAM Role** | `AmazonEKSClusterPolicy` attached |
+| **Node Group** | `t3.medium` ON_DEMAND instances (min: 1, desired: 2, max: 4) |
+| **Node IAM Role** | `AmazonEKSWorkerNodePolicy`, `AmazonEKS_CNI_Policy`, `AmazonEC2ContainerRegistryReadOnly` |
 
-[![contributors](https://contributors-img.web.app/image?repo=open-telemetry/opentelemetry-demo)](https://github.com/open-telemetry/opentelemetry-demo/graphs/contributors)
+### State Management
 
-[docs]: https://opentelemetry.io/docs/demo/
+- **Remote Backend**: Terraform state is stored in S3 (`opentelemetry-eks-state-bucket`) with encryption enabled
+- **State Locking**: Uses S3 native lock files (`use_lockfile = true`) to prevent concurrent modifications
+- The S3 backend bucket itself is provisioned via a separate Terraform config (`terraform/EKS/backend/`)
 
-<!-- Links for Demos featuring the Astronomy Shop section -->
+### Terraform Commands Used
 
-[AlibabaCloud LogService]: https://github.com/aliyun-sls/opentelemetry-demo
-[AppDynamics]: https://www.appdynamics.com/blog/cloud/how-to-observe-opentelemetry-demo-app-in-appdynamics-cloud/
-[Aspecto]: https://github.com/aspecto-io/opentelemetry-demo
-[Axiom]: https://play.axiom.co/axiom-play-qf1k/dashboards/otel.traces.otel-demo-traces
-[Axoflow]: https://axoflow.com/opentelemetry-support-in-more-detail-in-axosyslog-and-syslog-ng/
-[Azure Data Explorer]: https://github.com/Azure/Azure-kusto-opentelemetry-demo
-[Coralogix]: https://coralogix.com/blog/configure-otel-demo-send-telemetry-data-coralogix
-[Dash0]: https://github.com/dash0hq/opentelemetry-demo
-[Datadog]: https://docs.datadoghq.com/opentelemetry/guide/otel_demo_to_datadog
-[Dynatrace]: https://www.dynatrace.com/news/blog/opentelemetry-demo-application-with-dynatrace/
-[Elastic]: https://github.com/elastic/opentelemetry-demo
-[Google Cloud]: https://github.com/GoogleCloudPlatform/opentelemetry-demo
-[Grafana Labs]: https://github.com/grafana/opentelemetry-demo
-[Guance]: https://github.com/GuanceCloud/opentelemetry-demo
-[Honeycomb.io]: https://github.com/honeycombio/opentelemetry-demo
-[Instana]: https://github.com/instana/opentelemetry-demo
-[Kloudfuse]: https://github.com/kloudfuse/opentelemetry-demo
-[Liatrio]: https://github.com/liatrio/opentelemetry-demo
-[Logz.io]: https://logz.io/learn/how-to-run-opentelemetry-demo-with-logz-io/
-[New Relic]: https://github.com/newrelic/opentelemetry-demo
-[OpenSearch]: https://github.com/opensearch-project/opentelemetry-demo
-[Sentry]: https://github.com/getsentry/opentelemetry-demo
-[ServiceNow Cloud Observability]: https://docs.lightstep.com/otel/quick-start-operator#send-data-from-the-opentelemetry-demo
-[Splunk]: https://github.com/signalfx/opentelemetry-demo
-[Sumo Logic]: https://www.sumologic.com/blog/common-opentelemetry-demo-application/
-[TelemetryHub]: https://github.com/TelemetryHub/opentelemetry-demo/tree/telemetryhub-backend
-[Teletrace]: https://github.com/teletrace/opentelemetry-demo
-[Tracetest]: https://github.com/kubeshop/opentelemetry-demo
-[Uptrace]: https://github.com/uptrace/uptrace/tree/master/example/opentelemetry-demo
+```bash
+# Initialize modules and backend
+terraform init
+
+# Preview infrastructure changes
+terraform plan
+
+# Provision the infrastructure
+terraform apply
+
+# Tear down (lifecycle management)
+terraform destroy
+```
+
+---
+
+## 🚀 Phase 3 — CI/CD Pipeline (GitHub Actions + ArgoCD)
+
+Implemented a **fully automated GitOps pipeline** where code changes flow from commit to production without manual intervention.
+
+### CI Pipeline — GitHub Actions
+
+The CI workflow (`.github/workflows/ci.yaml`) triggers on **pull requests to `main`** and runs through 4 stages:
+
+```
+┌──────────┐     ┌───────────────┐     ┌──────────────┐     ┌──────────────────────┐
+│  Build   │────►│ Code Quality  │────►│ Docker Build  │────►│ Update K8s Manifest  │
+│  & Test  │     │   (Linting)   │     │   & Push      │     │  (Image Tag)         │
+└──────────┘     └───────────────┘     └──────────────┘     └──────────────────────┘
+```
+
+#### Stage Details
+
+| Stage | What It Does |
+|---|---|
+| **Build & Test** | Sets up Go 1.24, downloads dependencies, compiles the binary, runs `go test ./...` |
+| **Code Quality** | Runs `golangci-lint v2.12` for static analysis and code quality checks |
+| **Docker Build & Push** | Uses `docker/build-push-action` with Buildx; pushes to DockerHub with `github.run_id` as the unique image tag |
+| **Update K8s Manifest** | Uses `sed` to update the image tag in `kubernetes/productcatalog/deploy.yaml`, commits the change back to the branch |
+
+#### Key CI Design Decisions
+
+- **Unique image tags** — `github.run_id` ensures every build produces a unique, traceable image tag (no `latest` tag ambiguity)
+- **Automated manifest update** — the CI pipeline commits the new image tag directly to the Kubernetes manifest, forming the bridge to GitOps
+- **Separation of concerns** — build and code quality jobs run in parallel; Docker push only runs after build succeeds
+
+### CD Pipeline — ArgoCD (GitOps)
+
+ArgoCD is deployed on the EKS cluster and configured to watch this repository's `kubernetes/` directory.
+
+#### How It Works
+
+1. **CI pushes a new image tag** → CI updates the deployment manifest → CI commits and pushes
+2. **ArgoCD detects the commit** → compares the desired state (Git) with the live state (cluster)
+3. **ArgoCD syncs automatically** → applies the updated manifest to the EKS cluster
+4. **Zero manual intervention** — the entire flow from code change to production deployment is automated
+
+#### ArgoCD Benefits Realized
+
+- 🔄 **Automatic sync** — any Git change is reflected in the cluster within seconds
+- 📋 **Audit trail** — Git history serves as the single source of truth for all deployments
+- ⏪ **Easy rollbacks** — revert a Git commit to roll back a deployment instantly
+- 🔍 **Drift detection** — ArgoCD alerts if the live cluster state diverges from Git
+
+---
+
+## 📂 Kubernetes Manifests
+
+Each microservice has its own directory under `kubernetes/` with a `Deployment` and `Service` manifest:
+
+```
+kubernetes/
+├── serviceaccount.yaml              # Shared ServiceAccount for all services
+├── complete-deploy.yaml             # Full application deployment (single file)
+├── productcatalog/
+│   ├── deploy.yaml                  # Deployment — image updated by CI pipeline
+│   └── svc.yaml                     # ClusterIP Service
+├── recommendation/
+│   ├── deploy.yaml                  # Deployment
+│   └── svc.yaml                     # ClusterIP Service
+├── ad/
+│   ├── deploy.yaml                  # Deployment
+│   └── svc.yaml                     # ClusterIP Service
+├── cart/
+├── checkout/
+├── currency/
+├── email/
+├── frontend/
+├── payment/
+├── shipping/
+└── ... (15+ services total)
+```
+
+### Manifest Highlights
+
+- **OpenTelemetry integration** — every pod exports traces and metrics to the OTel Collector via `OTEL_EXPORTER_OTLP_ENDPOINT`
+- **Resource limits** — memory limits set per service (e.g., 20Mi for Product Catalog, 500Mi for Recommendation)
+- **Kubernetes labels** — consistent labeling with `app.kubernetes.io/*` for discoverability and management
+- **Service discovery** — services communicate via Kubernetes DNS (`<service-name>:<port>`)
+
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technologies |
+|---|---|
+| **Languages** | Go, Python, Java, .NET, Node.js, Rust, C++, PHP, Ruby, Kotlin |
+| **Containerization** | Docker, Docker Compose, Multi-stage Builds |
+| **Orchestration** | Kubernetes (AWS EKS v1.36) |
+| **Infrastructure** | Terraform (Modular), AWS (VPC, EKS, S3, IAM, NAT Gateway) |
+| **CI** | GitHub Actions |
+| **CD** | ArgoCD (GitOps) |
+| **Registry** | DockerHub |
+| **Observability** | OpenTelemetry, OTel Collector |
+| **Communication** | gRPC, Protocol Buffers, Kafka |
+
+---
+
+## 📁 Repository Structure
+
+```
+.
+├── .github/workflows/
+│   └── ci.yaml                # GitHub Actions CI pipeline
+├── src/                       # Source code for all 15+ microservices
+│   ├── product-catalog/       #   Go — with Dockerfile
+│   ├── recommendation/        #   Python — with Dockerfile
+│   ├── ad/                    #   Java — with Dockerfile
+│   ├── cart/                  #   .NET
+│   ├── checkout/              #   Go
+│   ├── currency/              #   C++
+│   ├── email/                 #   Ruby
+│   ├── frontend/              #   TypeScript
+│   ├── payment/               #   Node.js
+│   ├── shipping/              #   Rust
+│   └── ...
+├── kubernetes/                # K8s manifests (watched by ArgoCD)
+│   ├── productcatalog/
+│   ├── recommendation/
+│   ├── ad/
+│   └── ...
+├── terraform/                 # Infrastructure as Code
+│   ├── main.tf                #   Root module
+│   ├── Modules/
+│   │   ├── vpc/               #   VPC module
+│   │   └── eks/               #   EKS module
+│   └── EKS/backend/           #   S3 state backend
+└── docker-compose.yml         # Local development environment
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- AWS CLI configured with appropriate credentials
+- Terraform >= 1.0
+- Docker & Docker Compose
+- `kubectl` configured
+- ArgoCD CLI (optional)
+
+### 1. Provision Infrastructure
+
+```bash
+# Create the S3 backend bucket first
+cd terraform/EKS/backend
+terraform init && terraform apply
+
+# Provision VPC + EKS
+cd ../../
+terraform init
+terraform plan
+terraform apply
+```
+
+### 2. Configure kubectl
+
+```bash
+aws eks update-kubeconfig --name my-eks-cluster --region us-east-1
+```
+
+### 3. Install ArgoCD on the Cluster
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+### 4. Connect ArgoCD to This Repository
+
+Point ArgoCD to the `kubernetes/` directory of this repository. ArgoCD will automatically sync all manifests to the cluster.
+
+### 5. Trigger a Deployment
+
+Simply open a pull request to `main` — the CI pipeline will:
+1. Build and test the code
+2. Push a new Docker image
+3. Update the Kubernetes manifest
+4. ArgoCD auto-syncs the change to the cluster ✅
+
+---
+
+## 💡 Key Learnings & Interview Talking Points
+
+- **Why Terraform Modules?** — Reusability and separation of concerns. The VPC and EKS modules can be independently versioned, tested, and reused across projects. Changes to networking don't affect cluster configuration.
+
+- **Why S3 Remote State?** — Enables team collaboration, prevents state conflicts with locking, and provides encryption at rest for sensitive infrastructure metadata.
+
+- **Why GitOps with ArgoCD?** — Git becomes the single source of truth. Every deployment is auditable, reproducible, and reversible. No `kubectl apply` from local machines.
+
+- **Why `github.run_id` as the image tag?** — Guarantees unique, monotonically increasing tags tied to specific CI runs. Makes it trivial to trace a running container back to the exact build that produced it.
+
+- **Why Multi-stage Docker Builds?** — Reduces final image size by 10-20x by excluding build tools, compilers, and source code from the runtime image. Smaller images = faster pulls, less storage, reduced attack surface.
+
+- **Why Private Subnets for Worker Nodes?** — Security best practice. Worker nodes are not directly accessible from the internet. All outbound traffic goes through NAT Gateways, and ingress is controlled via load balancers in public subnets.
+
+---
+
+## 📜 License
+
+This project is based on the [OpenTelemetry Demo](https://github.com/open-telemetry/opentelemetry-demo) and is licensed under the [Apache License 2.0](./LICENSE).
